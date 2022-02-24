@@ -1,0 +1,4 @@
+data/text8*
+__pycache__/
+*.DS_Store
+checkpoints*
