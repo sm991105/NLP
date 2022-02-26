@@ -4,12 +4,13 @@ editor-gh: ykl7
 """
 
 import collections
-
+import random
 import numpy as np
 import torch
 
 np.random.seed(1234)
 torch.manual_seed(1234)
+
 
 # Read the data into a list of strings.
 def read_data(filename):
@@ -17,6 +18,7 @@ def read_data(filename):
         text = file.read()
         data = [token.lower() for token in text.strip().split(" ")]
     return data
+
 
 def build_dataset(words, vocab_size):
     count = [['UNK', -1]]
@@ -38,23 +40,10 @@ def build_dataset(words, vocab_size):
     vocab_id_to_token = dict(zip(vocab_token_to_id.values(), vocab_token_to_id.keys()))
     return data, count, vocab_token_to_id, vocab_id_to_token
 
+
 class Dataset:
     def __init__(self, data, batch_size=128, num_skips=8, skip_window=4):
-        """
-        @data_index: the index of a word. You can access a word using data[data_index]
-        @batch_size: the number of instances in one batch
-        @num_skips: the number of samples you want to draw in a window 
-                (In the below example, it was 2)
-        @skip_windows: decides how many words to consider left and right from a context word. 
-                    (So, skip_windows*2+1 = window_size)
-
-        My name is ABC XYZ.
-        'is' : centre word
-        'my name abc xyz' :
-        """
-
-
-        self.data_index=0
+        self.data_index = 0
         self.data = data
         assert batch_size % num_skips == 0
         assert num_skips <= 2 * skip_window
@@ -62,9 +51,9 @@ class Dataset:
         self.batch_size = batch_size
         self.num_skips = num_skips
         self.skip_window = skip_window
-    
+
     def reset_index(self, idx=0):
-        self.data_index=idx
+        self.data_index = idx
 
     def generate_batch(self):
         """
@@ -73,17 +62,34 @@ class Dataset:
         batch will contain word ids for context words. Dimension is [batch_size].
         labels will contain word ids for predicting(target) words. Dimension is [batch_size, 1].
         """
-        
-        center_word = np.ndarray(shape=(self.batch_size), dtype=np.int32)
-        context_word = np.ndarray(shape=(self.batch_size), dtype=np.int32)
-        
+        # batch
+        center_word = np.ndarray(shape=self.batch_size, dtype=np.int32)
+        # labels
+        context_word = np.ndarray(shape=self.batch_size, dtype=np.int32)
+
         # stride: for the rolling window
-        stride = 1 
+        stride = 1
 
         ### TODO(students): start
+        span = 2 * self.skip_window + 1
+        buffer = collections.deque(maxlen=span)
+        for _ in range(span):
+            buffer.append(self.data[self.data_index])
+            self.data_index = (self.data_index+1) % len(self.data)
 
+        for i in range(self.batch_size):
+            target = self.skip_window
+            targets_to_avoid = [self.skip_window]
+            for j in range(self.num_skips):
+                while target in targets_to_avoid:
+                    target = random.randint(0, span-1)
+                targets_to_avoid.append(target)
+                center_word[i * self.num_skips + j] = self.buffer[self.skip_window]
+                context_word[i * self.num_skips + j, 0] = self.buffer[target]
+            buffer.append(self.data[self.data_index])
+            self.data_index = (self.data_index + 1) % len(self.data)
         ### TODO(students): end
 
         return torch.LongTensor(center_word), torch.LongTensor(context_word)
-
-    # extract context & centre words -> return
+    # torch.tensor 은 자료형이라고 생각하면 됨
+    # extract context & center words -> return
