@@ -63,31 +63,31 @@ class Dataset:
         labels will contain word ids for predicting(target) words. Dimension is [batch_size, 1].
         """
         # batch
-        center_word = np.ndarray(shape=self.batch_size, dtype=np.int32)
+        center_word = np.ndarray(shape=(self.batch_size), dtype=np.int32)
         # labels
-        context_word = np.ndarray(shape=self.batch_size, dtype=np.int32)
+        context_word = np.ndarray(shape=(self.batch_size, 1), dtype=np.int32)
 
         # stride: for the rolling window
         stride = 1
 
         ### TODO(students): start
-        span = 2 * self.skip_window + 1
-        buffer = collections.deque(maxlen=span)
-        for _ in range(span):
-            buffer.append(self.data[self.data_index])
-            self.data_index = (self.data_index+1) % len(self.data)
+        self.data_index += self.skip_window if (self.data_index == 0) else self.data_index
+        self.data_index %= len(self.data)
+        # Used to keep track of the number of words in the batch so far
+        curr_batch_size = 0
+        while curr_batch_size < self.batch_size:
+            context_word[curr_batch_size:curr_batch_size + self.num_skips] = self.data[self.data_index]
+            # Extracting all possible context words in the window
+            temp_window = self.data[self.data_index - self.skip_window:self.data_index] + self.data[self.data_index + 1:self.data_index + 1 + self.skip_window]
+            # Random sampling of context words. num_skips could be much lesser than the window size at times
+            sampled_window = np.random.choice(temp_window, size=self.num_skips, replace=False)
+            center_word[curr_batch_size:curr_batch_size + self.num_skips] = sampled_window
+            # Updation for exit condition
+            curr_batch_size += self.num_skips
+            self.data_index += stride
+        # Ask Matt: about stride
+        return center_word, context_word
 
-        for i in range(self.batch_size):
-            target = self.skip_window
-            targets_to_avoid = [self.skip_window]
-            for j in range(self.num_skips):
-                while target in targets_to_avoid:
-                    target = random.randint(0, span-1)
-                targets_to_avoid.append(target)
-                center_word[i * self.num_skips + j] = self.buffer[self.skip_window]
-                context_word[i * self.num_skips + j, 0] = self.buffer[target]
-            buffer.append(self.data[self.data_index])
-            self.data_index = (self.data_index + 1) % len(self.data)
         ### TODO(students): end
 
         return torch.LongTensor(center_word), torch.LongTensor(context_word)

@@ -39,9 +39,12 @@ class WordVec(nn.Module):
 
     def negative_log_likelihood_loss(self, center_word, context_word):
         ### TODO(students): start
-
+        # Basically same with cross entropy formula
+        A = np.sum(np.multiply(context_word, center_word), axis=1)
+        center_word = np.transpose(center_word)
+        B = np.log(np.sum(np.exp(np.matmul(context_word, center_word)), axis=1))
+        loss = np.subtract(B, A)
         ### TODO(students): end
-
         return loss
     
     def negative_sampling(self, center_word, context_word):
