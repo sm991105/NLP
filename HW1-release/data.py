@@ -71,25 +71,47 @@ class Dataset:
         stride = 1
 
         ### TODO(students): start
-        self.data_index += self.skip_window if (self.data_index == 0) else self.data_index
+        center_pos = 0  # 2
+        index = center_pos
+        for i in self.data:  # c
+            for j in (self.data[center_pos - self.skip_window: center_pos + self.skip_window + 1]):  # b c d
+                # data 앞이나 끝에서 예외처리
+                if (center_pos - self.skip_window < 0) or (center_pos + self.skip_window > (len(self.data) - 1)):
+                    continue
+                else:
+                    # 자기자신은 넣지 않으므로 예외처리
+                    if j == i:
+                        continue
+                    else:
+                        if index == self.batch_size:
+                            # 이 리턴문 여기로 옮겼어
+                            return torch.LongTensor(center_word), torch.LongTensor(context_word)
+                        center_word[index] = i  # c c
+                        context_word[index] = j  # b d
+                        index += 1
+            center_pos += 1
+
+        '''current_batch_size = 0
+        if self.data_index == 0:
+            self.data_index += self.skip_window
+        else:
+            self.data_index
+
         self.data_index %= len(self.data)
         # Used to keep track of the number of words in the batch so far
-        curr_batch_size = 0
-        while curr_batch_size < self.batch_size:
-            context_word[curr_batch_size:curr_batch_size + self.num_skips] = self.data[self.data_index]
+
+        while current_batch_size < self.batch_size:
+            context_word[current_batch_size:current_batch_size + self.num_skips] = self.data[self.data_index]
             # Extracting all possible context words in the window
             temp_window = self.data[self.data_index - self.skip_window:self.data_index] + self.data[self.data_index + 1:self.data_index + 1 + self.skip_window]
             # Random sampling of context words. num_skips could be much lesser than the window size at times
             sampled_window = np.random.choice(temp_window, size=self.num_skips, replace=False)
-            center_word[curr_batch_size:curr_batch_size + self.num_skips] = sampled_window
+            center_word[current_batch_size:current_batch_size + self.num_skips] = sampled_window
             # Updation for exit condition
-            curr_batch_size += self.num_skips
+            current_batch_size += self.num_skips
             self.data_index += stride
-        # Ask Matt: about stride
-        return center_word, context_word
-
         ### TODO(students): end
 
-        return torch.LongTensor(center_word), torch.LongTensor(context_word)
-    # torch.tensor 은 자료형이라고 생각하면 됨
-    # extract context & center words -> return
+        return torch.LongTensor(center_word), torch.LongTensor(context_word)'''
+
+
